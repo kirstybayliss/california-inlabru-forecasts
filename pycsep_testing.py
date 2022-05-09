@@ -34,29 +34,29 @@ comcat_catalog = csep.query_comcat(start_date, end_date, min_magnitude=forecast.
 # Filter observed catalogue using the same region as the forecast
 comcat_catalog = comcat_catalog.filter_spatial(forecast.region)
 
-SRMS_full = csep.load_catalog_forecast("Forecasts/SRMS_Km_2511.dat",
+SRMS_full = csep.load_catalog_forecast("/Forecasts/Forecasts_1985_2005/SRMS_Km_2303.dat",
                                       start_time = start_date, end_time = end_date, filter_spatial=True,
                                       region = space_magnitude_region, apply_filters=True) 
 
-SRMS_DC = csep.load_catalog_forecast("Forecasts/SRMSMs_Km_2511.dat",
+SRMS_DC = csep.load_catalog_forecast("/Forecasts/Forecasts_1985_2005/SRMSMs_Km_2303.dat",
                                       start_time = start_date, end_time = end_date, filter_spatial=True,
                                       region = space_magnitude_region, apply_filters=True) 
                                       
-SRMSNK_full = csep.load_catalog_forecast("Forecasts/SRMSNK_Km_2511.dat" ,
+SRMSNK_full = csep.load_catalog_forecast("/Forecasts/Forecasts_1985_2005/SRMSNK_Km_2303.dat" ,
                                       start_time = start_date, end_time = end_date, filter_spatial=True,
                                       region = space_magnitude_region, apply_filters=True)  
                                       
-SRMSNK_DC = csep.load_catalog_forecast("Forecasts/SRMSNKMs_Km_2511.dat" ,
+SRMSNK_DC = csep.load_catalog_forecast("/Forecasts/Forecasts_1985_2005/SRMSNKMs_Km_2303.dat" ,
                                       start_time = start_date, end_time = end_date, filter_spatial=True,
                                       region = space_magnitude_region, apply_filters=True)
                                       
-FDSRMS_full = csep.load_catalog_forecast("Forecasts/FDSRMS_Km_2511.txt" ,
+FDSRMS_full = csep.load_catalog_forecast("/Forecasts/Forecasts_1985_2005/FDSRMS_Km_2303.txt" ,
                                       start_time = start_date, end_time = end_date, filter_spatial=True,
                                       region = space_magnitude_region, apply_filters=True)
                                       
-FDSRMS_DC = csep.load_catalog_forecast("Forecasts/FDSRMSMs_Km_2511.txt" ,
+FDSRMS_DC = csep.load_catalog_forecast("/Forecasts/Forecasts_1985_2005/FDSRMSMs_Km_2303.txt" ,
                                       start_time = start_date, end_time = end_date, filter_spatial=True,
-                                      region = space_magnitude_region, apply_filters=True)         
+                                      region = space_magnitude_region, apply_filters=True)              
                                       
 ### A function to apply 4 standard tests to a list of catalogue-type forecasts
 ## Performs pseudo-likelihood test, magnitude test, number test and spatial test 
@@ -68,26 +68,23 @@ def alphabet_tests_catalog(forecast_list, catalog):
     
     for i in range(len(forecast_list)):
         print("Running L-tests")
-        result = catalog_evaluations.pseudolikelihood_test(forecast_list[i], catalog, verbose=False)
-        LTests.append(result)
+        Lresult = catalog_evaluations.pseudolikelihood_test(forecast_list[i], catalog, verbose=False)
+        LTests.append(Lresult)
         
-    for i in range(len(forecast_list)):
         print("Running S-tests")
-        result = catalog_evaluations.spatial_test(forecast_list[i], catalog, verbose=False)
-        STests.append(result)
+        Sresult = catalog_evaluations.spatial_test(forecast_list[i], catalog, verbose=False)
+        STests.append(Sresult)
     
-    for i in range(len(forecast_list)):
         print("Running M-tests")
-        result = catalog_evaluations.magnitude_test(forecast_list[i], catalog, verbose=False)
-        MTests.append(result)
+        Mresult = catalog_evaluations.magnitude_test(forecast_list[i], catalog, verbose=False)
+        MTests.append(Mresult)
     
-    for i in range(len(forecast_list)):
         print("Running N-tests")
-        result = catalog_evaluations.number_test(forecast_list[i], catalog, verbose=False)
-        NTests.append(result)
+        Nresult = catalog_evaluations.number_test(forecast_list[i], catalog, verbose=False)
+        NTests.append(Nresult)
     
-    return LTests, MTests, NTests, STests
-  
+    return LTests, MTests, NTests, STests  
+
 ## Make a list of forecasts
 forecast_cats = [SRMS_full, SRMS_DC, FDSRMS_full, FDSRMS_DC, SRMSNK_full, SRMSNK_DC]
 
@@ -228,27 +225,27 @@ SRMS = csep.load_gridded_forecast("Forecasts/SRMS_gridded_Km_2511.dat",
 #SRMS.plot()
 #plt.show()
 
-SRMSms = csep.load_gridded_forecast("Forecasts/SRMSms_gridded_Km_2511.dat",
+SRMSms = csep.load_gridded_forecast("/Forecasts/Forecasts_1985_2005/SRMSms_gridded_Km_2303.dat",
                                   start_date=start_date,
                                   end_date=end_date,
                                   name='SRMS declustered')
                                   
-FDSRMS = csep.load_gridded_forecast("Forecasts/FDSRMS_gridded_Km_2511.dat",
+FDSRMS = csep.load_gridded_forecast("/Forecasts/Forecasts_1985_2005/FDSRMS_gridded_Km_2303.dat",
                                   start_date=start_date,
                                   end_date=end_date,
                                   name='FDSRMS')
                                   
-FDSRMSms = csep.load_gridded_forecast("Forecasts/FDSRMSms_gridded_Km_2511.dat",
+FDSRMSms = csep.load_gridded_forecast("/Forecasts/Forecasts_1985_2005/FDSRMSms_gridded_Km_2303.dat",
                                   start_date=start_date,
                                   end_date=end_date,
                                   name='FDSRMS declustered')
                                   
-SRMSNK = csep.load_gridded_forecast("Forecasts/SRMSNK_gridded_Km_2511.dat",
+SRMSNK = csep.load_gridded_forecast("/Forecasts/Forecasts_1985_2005/SRMSNK_gridded_Km_2303.dat",
                                   start_date=start_date,
                                   end_date=end_date,
                                   name='SRMSNK')
                                   
-SRMSNKms = csep.load_gridded_forecast("Forecasts/SRMSNKms_gridded_Km_2511.dat",
+SRMSNKms = csep.load_gridded_forecast("/Forecasts/Forecasts_1985_2005/SRMSNKms_gridded_Km_2303.dat",
                                   start_date=start_date,
                                   end_date=end_date,
                                   name='SRMSNK declustered')
@@ -263,6 +260,7 @@ Helmstetter_dec = csep.load_gridded_forecast(datasets.helmstetter_mainshock_fnam
                                          start_date=start_date,
                                          end_date=end_date,
                                          name='helmstetter declustered')
+
                                          
 ## Check your catalogues line up with Helmstetter or your results will be inconsistent
 r = Helmstetter.region
@@ -279,20 +277,17 @@ def alphabet_tests_gridded(forecast_list, catalog):
     STests = []
     
     for i in range(len(forecast_list)):
-        result = poisson.conditional_likelihood_test(forecast_list[i], catalog, num_simulations=100000)
-        LTests.append(result)
+        Lresult = poisson.conditional_likelihood_test(forecast_list[i], catalog, num_simulations=100000)
+        LTests.append(Lresult)
     
-    for i in range(len(forecast_list)):
-        result = poisson.magnitude_test(forecast_list[i], catalog, num_simulations=100000)
-        MTests.append(result)
+        Mresult = poisson.magnitude_test(forecast_list[i], catalog, num_simulations=100000)
+        MTests.append(Mresult)
     
-    for i in range(len(forecast_list)):
-        result = poisson.number_test(forecast_list[i], catalog)
-        NTests.append(result)
+        Nresult = poisson.number_test(forecast_list[i], catalog)
+        NTests.append(Nresult)
     
-    for i in range(len(forecast_list)):
-        result = poisson.spatial_test(forecast_list[i], catalog, num_simulations=100000)
-        STests.append(result)
+        Sresult = poisson.spatial_test(forecast_list[i], catalog, num_simulations=100000)
+        STests.append(Sresult)
     
     return LTests, MTests, NTests, STests
 

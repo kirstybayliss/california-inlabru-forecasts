@@ -1,3 +1,8 @@
+library(grid)
+library(gridExtra)
+library(cowplot)
+library(RColorBrewer)
+
 #' Create polygons from point locations that describe polygon edges
 #'
 #' Useful where faults are stored as points in a dataframe (e.g. UCERF 3 fault geometries).
@@ -399,4 +404,109 @@ TapGRM <- function(n, b, corner_mag, m_min){
   ms <- (2/3)*(log10(mom) - 9.1)
   
   return(ms)
+}
+
+#' Plot pairplot of collection of models
+#' 
+#' Plots comparison plot of a list of models with median posterior plot as diagonal, pairwise median differences in the top right and pairwise variance differencs in the bottom left.
+#' Median plots have consistent colour scale with colour scheme specified in function call. Pairwise difference plots use blue-white-red to show negative - zero - positive changes.
+#' 
+#' @param pred_list list of inlabru prediction objects to be compared
+#' @param pred_names names for each prediction (list of strings)
+#' @param colour_scheme an RColorBrewer colour scheme for median plots (comparison plots use red-blue colour scheme for variation)
+#' @param poly a polygon object to include in the figure - this should be optional but is currently not. Sorry.
+#' @param med_lims limits for the median differences (currently defaults to (-2, 2))
+#' @param var_lims limits for varaince differences (currently defaults to (-3, 5))
+#' @return plot comparing all models in list
+#' @export
+
+comp_pairplots <- function(pred_list, pred_names, colour_scheme, poly, med_lims =c(-2, 2), var_lims = c(-3, 5)){
+  n <- length(pred_list)
+  
+  ## Set up colour scheme for median plots
+  ranges <- list()
+  for (j in 1:n){
+    ranges = append(ranges, range(pred_list[[j]]$median))
+  }
+  
+  csc <- scale_fill_gradientn(colours = brewer.pal(9, colour_scheme), limits = range(ranges))
+  plots <- list()
+  pl_nm <- 1
+  for (i in 1:n){
+    for (k in 1:n){
+      if (i < k){
+        pred_list[[i]]$med_diff <- pred_list[[i]]$median - pred_list[[k]]$median
+        plots[[pl_nm]] <- as_grob(ggplot() + gg(pred_list[[i]]['med_diff']) + geom_sf(data = st_as_sf(poly), fill=NA) +  labs(x="longitude", y="latitude") + theme_classic() + coord_sf() + scale_fill_gradient2(low="blue", mid="white", high="red", limits=med_lims) + ggtitle(paste0(pred_names[i], "-", pred_names[k]))+ theme(plot.title = element_text(size=8))) 
+        pl_nm <- pl_nm + 1
+      }
+      else if (i > k){
+        pred_list[[i]]$var_diff <- pred_list[[i]]$var - pred_list[[k]]$var
+        plots[[pl_nm]] <- as_grob(ggplot() + gg(pred_list[[i]]['var_diff']) + geom_sf(data = st_as_sf(poly), fill=NA) +  labs(x="longitude", y="latitude") + theme_classic() + coord_sf() + scale_fill_gradient2(low="blue", mid="white", high="red", limits=var_lims) + ggtitle(paste0(pred_names[i], "-", pred_names[k], " var")) + theme(plot.title = element_text(size=8))) 
+        pl_nm <- pl_nm + 1
+      }
+      else{
+        plots[[pl_nm]] <- as_grob(ggplot() + gg(pred_list[[i]]['median']) + geom_sf(data = st_as_sf(poly), fill=NA) +  labs(x="longitude", y="latitude") + theme_classic() + coord_sf() + csc + ggtitle(pred_names[i]) + theme(plot.title = element_text(size=8))) 
+        pl_nm <- pl_nm + 1
+      }
+    }
+  }
+  
+  
+  ##core = list(fg_params=list(cex = 1.0)),
+  ##colhead = list(fg_params=list(cex = 0.5)),
+  ##rowhead = list(fg_params=list(cex = 0.5))
+  combine <- rbind(tableGrob(t(c(pred_names[1:n])), theme = ttheme_minimal(base_size= 12), rows = ""), 
+                   cbind(tableGrob(pred_names[1:n], theme = ttheme_minimal(base_size = 12)), 
+                         arrangeGrob(grobs = plots),  size = "last"), size = "last")
+  grid.newpage()
+  grid.draw(combine)
+  
+  #grid.arrange(grobs=lapply(plots, grobTree), ncol=n)
+  
+}
+
+#' Function to plot median and variances side by side
+#'
+#' @param pred_list list of inlabru prediction objects to be compared
+#' @param pred_names names for each prediction (list of strings)
+#' @param colour_scheme an RColorBrewer colour scheme for plots 
+#' @param poly a polygon object to include in the figure - this should be optional but is currently not. Sorry.
+#' @return plot with median log intensity and variance columns for each model in list
+#' @export
+comparison_plots <- function(list_of_predictions, pred_names, colour_scheme, poly){
+  n <- length(list_of_predictions)
+  
+  ## Set up colour scheme for median plots
+  ranges_med <- list()
+  ranges_var <- list()
+  for (j in 1:n){
+    ranges_med = append(ranges_med, range(pred_list[[j]]$median))
+    ranges_var = append(ranges_var, range(pred_list[[j]]$var))
+  }
+  
+  csc_range_med <- scale_fill_gradientn(colours = brewer.pal(9, colour_scheme), limits = range(ranges_med))
+  csc_range_var <- scale_fill_gradientn(colours = brewer.pal(9, colour_scheme), limits = range(ranges_var))
+  
+  pl_nm <- 1
+  plots <- list()
+  for (i in 1:n){
+    plots[[pl_nm]] <- as_grob(ggplot() + gg(pred_list[[i]]['median']) + geom_sf(data = st_as_sf(poly), fill=NA) +  labs(x="longitude", y="latitude") + theme_classic() + coord_sf() + csc_range_med + ggtitle(pred_names[i]) + theme(text = element_text(size = 8), plot.title = element_text(size = 8)))
+    pl_nm <- pl_nm + 1
+    plots[[pl_nm]] <- as_grob(ggplot() + gg(pred_list[[i]]['var']) + geom_sf(data = st_as_sf(poly), fill=NA) +  labs(x="longitude", y="latitude") + theme_classic() + coord_sf() + csc_range_var + ggtitle(pred_names[i]) + theme(text = element_text(size = 8), plot.title = element_text(size = 8)))
+    pl_nm <- pl_nm + 1
+    
+  }
+  
+  #d <- grid.arrange(grobs=lapply(plots, grobTree), ncol=2)
+  col.titles <- c("median", "variance")
+  #tt <- ttheme_default()
+  #grid.table(d, theme=tt)
+  #return(plots)
+  
+  #grid.arrange(grobs=lapply(plots, grobTree), ncol=2)
+  
+  grid.arrange(grobs=lapply(c(1,2), function(i) {
+    arrangeGrob(grobs=plots[seq(i, 2*n, by=2)], top=col.titles[i], ncol=1)
+  }), ncol=2)
+  
 }

@@ -7,6 +7,7 @@ The Comcat_catalogues folder contains the catalogues used to test the forecasts.
 California_forecast_inlabru_testing.Rmd is an R-markdown file that runs all steps for model generation and then tests the models with the `pyCSEP' python package using the R package `reticulate'.
 inlabru_import_functions.R contains functions to generate the two types of forecast as well as process some of the input data.
 pycsep_testing.py runs only the pyCSEP testing using the inlabru forecasts, which are included in the `Forecasts' folder.
+The Forecasts folder contains 2 sets of forecasts - those made using 1984-2004 data as in an earlier draft of the paper, and those made using data from 1985-2005 as in the updated draft (May 2022).
 
 ######################
 System information:
@@ -21,9 +22,9 @@ attached base packages:
 [1] parallel  grid      stats     graphics  grDevices utils     datasets  methods   base     
 
 other attached packages:
- [1] reticulate_1.20    RColorBrewer_1.1-2 maptools_1.1-1     dplyr_1.0.6        raster_3.4-13      future.apply_1.8.1 future_1.22.1     
- [8] sf_1.0-2           INLA_21.06.11      foreach_1.5.1      Matrix_1.3-3       fields_12.5        viridis_0.6.1      viridisLite_0.4.0 
-[15] spam_2.7-0         dotCall64_1.0-1    rgeos_0.5-5        rgdal_1.5-23       inlabru_2.3.1      sp_1.4-5           ggplot2_3.3.5  
+[1] RColorBrewer_1.1-2 maptools_1.1-2     dplyr_1.0.7        raster_3.5-9       future.apply_1.8.1 future_1.23.0      sf_1.0-4           INLA_21.12.11     
+[9] foreach_1.5.1      Matrix_1.3-3       fields_13.3        viridis_0.6.2      viridisLite_0.4.0  spam_2.7-0         dotCall64_1.0-1    rgeos_0.5-8       
+[17] rgdal_1.5-27       inlabru_2.3.1      sp_1.4-6           ggplot2_3.3.5      cowplot_1.1.1      gridExtra_2.3     
 
 ######################
 Most pacakages can be downloaded directly from CRAN, with the exception of INLA which is using the current (as of December 2021) testing version,

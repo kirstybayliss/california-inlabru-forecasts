@@ -23,6 +23,7 @@ library(raster)
 library(dplyr)
 library(maptools)
 library(RColorBrewer)
+library(ggplot2)
 
 ## set plan for future.apply - might need to change depending on OS.
 plan(multisession)
@@ -32,15 +33,21 @@ crs_wgs84 <- CRS(SRS_string='EPSG:4326')
 crs_Cal <- CRS(SRS_string='EPSG:3310')
 crs_Cal_km <- fm_crs_set_lengthunit(crs_Cal, "km")
 
+
+## If running from source:
+## setwd(getSrcDirectory()[1])
+## In RSTUDIO
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+
 ## import functions and the sampling functions are in this file
-source("California_inlabru_forecasts/inlabru_import_functions.R")
+source("/inlabru_import_functions.R")
 ggplot2::theme_set(ggplot2::theme_bw())
 
 ```
 
 Load data and functions we need for model construction
 ```{r}
-UCERFCat <- read.table("California_inlabru_forecasts/Data/UCERFCat.txt", quote="\"", comment.char="")
+UCERFCat <- read.table("/Data/UCERFCat.txt", quote="\"", comment.char="")
 colnames(UCERFCat) <- c("Year", "Month","Day", "Hr", "Min", "Sec", "y", "x", "Depth", "Mag", "MagType", "MagSource", "MagUncert", "MagRounding", "EQID", "aftershock", "foreshock")
 
 ## make points into spatial points dataframe by setting coordinates
@@ -50,11 +57,12 @@ proj4string(UCERFCat) <- crs_wgs84
 UCERFCat <- spTransform(UCERFCat, crs_Cal_km)
 
 MinMag <- 4.95
-## Set up twenty year catalog for 1984-2004, M>MinMag
-TwentyYrs <- subset(UCERFCat, UCERFCat$Mag >= MinMag & UCERFCat$Year > 1984 & UCERFCat$Year <= 2004)
+## Set up twenty year catalog for 1985-2004, M>MinMag
+## For previous 1984-2004 results, change dates in subset
+TwentyYrs <- subset(UCERFCat, UCERFCat$Mag >= MinMag & UCERFCat$Year > 1985 & UCERFCat$Year <= 2005)
 
 ## Import RELM testing polygon and set up as spatial polygon for plotting purposes 
-## NB This will probably need updated in the next year or so as sp package is being retired, but is currently (14/12/21) used in inlabru
+## NB This will probably need updated in the next year or so as sp package is being retired, but is currently (09/05/22) used in inlabru
 RELM_poly <- read.delim("California_inlabru_forecasts/Data/RELMTestingPolygon.txt", sep="", header = FALSE)
 RELM <- spatial_poly_from_df(RELM_poly, crs_wgs84)
 RELM_latlon <- RELM
@@ -79,7 +87,7 @@ ggplot() + gg(mesh2) + gg(TwentyYrs) + gg(RELM)
 Load data and set up functions for covariates
 
 ```{r, warning=FALSE}
-UCmodelSmooth2.pr <- readRDS("California_inlabru_forecasts/Data/UCERFPSeism1985.rds")
+UCmodelSmooth2.pr <- readRDS("/Data/UCERFPSeism1985.rds")
 #UCmodelSmooth2.CAL <- spTransform(UCmodelSmooth2.pr, crs_Cal_km)
 
 MSFn2 <- function(x, y){
@@ -95,7 +103,7 @@ MSFn2 <- function(x, y){
 }
 
 ## Read in text file, stores as dataframe
-strainratedata <- read.table("California_inlabru_forecasts/Data/GSRM_average_strain_v2.1-20150901.txt", sep='', comment='#')
+strainratedata <- read.table("/Data/GSRM_average_strain_v2.1-20150901.txt", sep='', comment='#')
 
 ## The GSRM strain rate data sets from GEM give three components of the strain rate tensor
 ## We want the 2nd invariant of strain rate which is calculated as  sqrt(e_xx^2 + e_yy^2 + 2*(e_xy^2))
@@ -132,7 +140,7 @@ StrainRateFn <- function(x,y) {
 }
 
 ## Read in fault geometry
-FG <- read.csv("California_inlabru_forecasts/Data/UCERFFaultGeom.csv", stringsAsFactors = FALSE)
+FG <- read.csv("/Data/UCERFFaultGeom.csv", stringsAsFactors = FALSE)
 FG2 <- subset(FG, FG$In.FM3.2 == 1)
 
 NFaults <- nrow(FG2)
@@ -146,7 +154,7 @@ FaultPolys <- SpatialPolygons(lapply(FaultPolyList, function(x){x@polygons[[1]]}
 proj4string(FaultPolys) <- CRS("+proj=longlat +datum=WGS84")
 
 ## Get slip-rate data
-SlipRates <- read.csv("California_inlabru_forecasts/Data/UCERFSlipRates.csv", stringsAsFactors=FALSE)
+SlipRates <- read.csv("/Data/UCERFSlipRates.csv", stringsAsFactors=FALSE)
 
 ## Specify the values we want from slip rates file (fault geometry 3.2)
 SR2 <- SlipRates[which(FG$In.FM3.2 == 1),]
@@ -189,7 +197,7 @@ NKFaultsContFG2 <- function(x,y){
   return(vt)
 }
 
-FaultDist <- readRDS("California_inlabru_forecasts/Data/FaultDist2pt5kmProj.rds")
+FaultDist <- readRDS("/Data/FaultDist2pt5kmProj.rds")
 
 
 FaultDistFn <- function(x,y) {
@@ -290,7 +298,7 @@ event_id <- seq(1, length(Cats$mags))
 stoch_cat_setT <- as.data.frame(cbind(Cats$x, Cats$y, Cats$mags, times, depth, Cats$cat_id, event_id))
 
 ## Write table output
-write.table(format(stoch_cat_setT, digits = 6), "SRMS_Km_2511.dat", quote = FALSE, row.names = FALSE, col.names = FALSE, sep=",")
+write.table(format(stoch_cat_setT, digits = 6), "/Forecasts/Forecasts_1985_2005/SRMS_Km_2303.dat", quote = FALSE, row.names = FALSE, col.names = FALSE, sep=",")
 
 ```
 
@@ -312,6 +320,7 @@ Pred_Num_Ms
 SRMSMs.pr <- predict(SRMSMs.fit, pixels(mesh2, mask=RELM), ~(SR + MS + loc_field + Intercept))
 
 ggplot() + gg(SRMSMs.pr)
+
 
 ## Generate samples from posterior
 T3 <- generate(SRMSMs.fit, mesh2, coordinates~(SR + MS + loc_field + Intercept), n.samples = 10000, num.threads = 4)
@@ -338,7 +347,7 @@ depth <- rep(10, length(Cats2$mags))
 event_id <- seq(1, length(Cats2$mags))
 stoch_cat_setT2 <- as.data.frame(cbind(Cats2$x, Cats2$y, Cats2$mags, times, depth, Cats2$cat_id, event_id))
 
-write.table(format(stoch_cat_setT2, digits = 6), "SRMSMs_Km_1411.dat", quote = FALSE, row.names = FALSE, col.names = FALSE, sep=",")
+write.table(format(stoch_cat_setT2, digits = 6), "/Forecasts/Forecasts_1985_2005/SRMSMs_Km_2303.dat", quote = FALSE, row.names = FALSE, col.names = FALSE, sep=",")
 ```
 
 Now repeat the above for SRMSNK model (model with slip rates from NeoKinema slip rate model)
@@ -383,7 +392,7 @@ depth <- rep(10, length(Cats3$mags))
 event_id <- seq(1, length(Cats3$mags))
 stoch_cat_setT3 <- as.data.frame(cbind(Cats3$x, Cats3$y, Cats3$mags, times, depth, Cats3$cat_id, event_id))
 
-write.table(format(stoch_cat_setT3, digits = 6), "SRMSNK_Km_2511.dat", quote = FALSE, row.names = FALSE, col.names = FALSE, sep=",")
+write.table(format(stoch_cat_setT3, digits = 6), "/Forecasts/Forecasts_1985_2005/SRMSNK_Km_2303.dat", quote = FALSE, row.names = FALSE, col.names = FALSE, sep=",")
 ```
 
 And for declustered events with SRMSNK:
@@ -415,7 +424,7 @@ depth <- rep(10, length(Cats4$mags))
 event_id <- seq(1, length(Cats4$mags))
 stoch_cat_setT5 <- as.data.frame(cbind(Cats4$x, Cats4$y, Cats4$mags, times, depth, Cats4$cat_id, event_id))
 
-write.table(format(stoch_cat_setT5, digits = 6), "SRMSNKMs_Km_2511.dat", quote = FALSE, row.names = FALSE, col.names = FALSE, sep=",")
+write.table(format(stoch_cat_setT5, digits = 6), "/Forecasts/Forecasts_1985_2005/SRMSNKMs_Km_2303.dat", quote = FALSE, row.names = FALSE, col.names = FALSE, sep=",")
 ```
 
 And for a model with fault-distances (FDSRMS)
@@ -453,7 +462,7 @@ depth <- rep(10, length(Cats5$mags))
 event_id <- seq(1, length(Cats5$mags))
 stoch_cat_setT6 <- as.data.frame(cbind(Cats5$x, Cats5$y, Cats5$mags, times, depth, Cats5$cat_id, event_id))
 
-write.table(format(stoch_cat_setT6, digits = 6), "FDSRMS_Km_1411.txt", quote = FALSE, row.names = FALSE, col.names = FALSE, sep=",")
+write.table(format(stoch_cat_setT6, digits = 6), "/Forecasts/Forecasts1985_2005/FDSRMS_Km_2303.txt", quote = FALSE, row.names = FALSE, col.names = FALSE, sep=",")
 ```
 
 ```{r, warning=FALSE}
@@ -502,7 +511,7 @@ depth <- rep(10, length(Cats6$mags))
 event_id <- seq(1, length(Cats6$mags))
 stoch_cat_setT7 <- as.data.frame(cbind(Cats6$x, Cats6$y, Cats6$mags, times, depth, Cats6$cat_id, event_id))
 
-write.table(format(stoch_cat_setT7, digits = 6), "FDSRMSMs_Km_1411.txt", quote = FALSE, row.names = FALSE, col.names = FALSE, sep=",")
+write.table(format(stoch_cat_setT7, digits = 6), "/Forecasts/Forecasts1985_2005/FDSRMSMs_Km_2303.txt", quote = FALSE, row.names = FALSE, col.names = FALSE, sep=",")
 ```
 
 Now make grid-based forecasts for each of these. 
@@ -528,30 +537,34 @@ FDSRMS_grid_Km_0510 <- csep_grid_wrapper(FDSRMS.fit, model_FDSRMS, RELM_latlon, 
 FDSRMSms_grid_Km_0510<- csep_grid_wrapper(FDSRMSMs.fit, model_FDSRMS, RELM_latlon, 0.1, 4.95, 8.95, 1, mesh=mesh2)
 ```
 
-Plot all posterior mean intensities (Figure 3)
+Pairwise comparison plots for all posterior mean intensities 
+
 ```{r}
-lprange <- range(SRMS_pred$median, SRMSMs.pr$median, FDSRMS_pred$median, FDSRMSMs_pred$median, SRMSNK_pred$median, SRMSNKMs_pred$median)
-csc <- scale_fill_gradientn(colours = brewer.pal(9, "YlOrRd"), limits = lprange)
+library(cowplot)
+library(grid)
+library(gridExtra)
 
-SRMS.plt <- ggplot() + gg(SRMS_pred) + gg(RELM) +  labs(x="Easting", y="Northing") + theme_classic() + coord_equal() + csc + ggtitle("srms")
-SRMSMs.plt <- ggplot() + gg(SRMSMs.pr) + gg(RELM) + labs(x="Easting", y="Northing") + theme_classic() + coord_equal() + csc + ggtitle("srmsdc")
-FDSRMS.plt <- ggplot() + gg(FDSRMS_pred) + gg(RELM) + labs(x="Easting", y="Northing") + theme_classic() + coord_equal() + csc + ggtitle("fdsrms")
-FDSRMSMs.plt <- ggplot() + gg(FDSRMSMs_pred) + gg(RELM) + labs(x="Easting", y="Northing") + theme_classic() + coord_equal() + csc + ggtitle("fdsrmsdc")
-SRMSNK.plt <- ggplot() + gg(SRMSNK_pred) + gg(RELM) + labs(x="Easting", y="Northing") + theme_classic() + coord_equal() + csc + ggtitle("srmsnk")
-SRMSNKMs.plt <- ggplot() + gg(SRMSNKMs_pred) + gg(RELM) + labs(x="Easting", y="Northing") + theme_classic() + coord_equal() + csc  + ggtitle("srmsnkdc")
+pred_list <- c(SRMS_pred, SRMSNK_pred, FDSRMS_pred)
+pred_names <- c("SRMS", "SRMSNK", "FDSRMS")
 
-multiplot(SRMS.plt, SRMSMs.plt, FDSRMS.plt, FDSRMSMs.plt, SRMSNK.plt, SRMSNKMs.plt, cols=3)
-
+comp_pairplots(pred_list, pred_names, "PuBuGn", RELM)
 ```
+```{r}
+pred_list_dc <- c(SRMSMs.pr, SRMSNKMs_pred, FDSRMSMs_pred)
+pred_names_dc <- c("SRMSDC", "SRMSNKDC", "FDSRMSDC")
+
+comp_pairplots(pred_list_dc, pred_names_dc, "PuBuGn", RELM, med_lims =c(-0.5, 0.5), var_lims =c(-0.5, 2))
+```
+
 
 Write all of those gridded forecasts to .dat files
 ```{r}
-write.table(format(SRMS_grid_Km_0111, digits = 6), "SRMS_gridded_Km_2511.dat", quote = FALSE, row.names = FALSE, col.names = FALSE, sep=" ")
-write.table(format(SRMSms_grid_Km_0111, digits = 6), "SRMSMs_gridded_Km_2511.dat", quote = FALSE, row.names = FALSE, col.names = FALSE, sep=" ")
-write.table(format(SRMSNK_grid_Km_0510, digits = 6), "SRMSNK_gridded_Km_2511.dat", quote = FALSE, row.names = FALSE, col.names = FALSE, sep=" ")
-write.table(format(SRMSNKms_grid_Km_0510, digits = 6), "SRMSNKMs_gridded_Km_2511.dat", quote = FALSE, row.names = FALSE, col.names = FALSE, sep=" ")
-write.table(format(FDSRMS_grid_Km_0510, digits = 6), "FDSRMS_gridded_Km_2511.dat", quote = FALSE, row.names = FALSE, col.names = FALSE, sep=" ")
-write.table(format(FDSRMSms_grid_Km_0510, digits = 6), "FDSRMSMs_gridded_Km_2511.dat", quote = FALSE, row.names = FALSE, col.names = FALSE, sep=" ")
+write.table(format(SRMS_grid_Km_0111, digits = 6), "/Forecasts/Forecasts1985_2005/SRMS_gridded_Km_2303.dat", quote = FALSE, row.names = FALSE, col.names = FALSE, sep=" ")
+write.table(format(SRMSms_grid_Km_0111, digits = 6), "/Forecasts/Forecasts1985_2005/SRMSMs_gridded_Km_2303.dat", quote = FALSE, row.names = FALSE, col.names = FALSE, sep=" ")
+write.table(format(SRMSNK_grid_Km_0510, digits = 6), "/Forecasts/Forecasts1985_2005/SRMSNK_gridded_Km_2303.dat", quote = FALSE, row.names = FALSE, col.names = FALSE, sep=" ")
+write.table(format(SRMSNKms_grid_Km_0510, digits = 6), "/Forecasts/Forecasts1985_2005/SRMSNKMs_gridded_Km_2303.dat", quote = FALSE, row.names = FALSE, col.names = FALSE, sep=" ")
+write.table(format(FDSRMS_grid_Km_0510, digits = 6), "/Forecasts/Forecasts1985_2005/FDSRMS_gridded_Km_2303.dat", quote = FALSE, row.names = FALSE, col.names = FALSE, sep=" ")
+write.table(format(FDSRMSms_grid_Km_0510, digits = 6), "/Forecasts/Forecasts1985_2005/FDSRMSMs_gridded_Km_2303.dat", quote = FALSE, row.names = FALSE, col.names = FALSE, sep=" ")
 
 ```
 
@@ -563,6 +576,8 @@ library(reticulate)
 ## Set-up for use with (different) virtual environment
 ## This specifically uses a conda environment rather than alternative python virtual environments (which don't work on Windows, fyi)
 conda_python(envname = "csep-dev", conda = "auto")
+
+py_install(envname = "csep-dev", packages=numpy, pip_ignore_installed=TRUE)
 ```
  
 We specify we want to use python by setting this up at the start of the code chunk. Then we can import python packages as we would in python.
@@ -593,7 +608,7 @@ region = regions.california_relm_region()
 # Bind region information to the forecast (this will be used for binning of the catalogs)
 space_magnitude_region = regions.create_space_magnitude_region(region, magnitudes)
 
-forecast = csep.load_catalog_forecast("California_inlabru_forecasts/Forecasts/SRMS_Km_2511.dat",
+forecast = csep.load_catalog_forecast("/Forecasts/Forecasts_1985_2005/SRMS_Km_2303.dat",
                                       start_time = start_date, end_time = end_date, filter_spatial=True,
                                       region = space_magnitude_region)
 
@@ -607,27 +622,27 @@ comcat_catalog = comcat_catalog.filter_spatial(forecast.region)
 Load all of our catalogue forecasts
 ```{python}
 
-SRMS_full = csep.load_catalog_forecast("California_inlabru_forecasts/Forecasts/SRMS_Km_2511.dat",
+SRMS_full = csep.load_catalog_forecast("/Forecasts/Forecasts_1985_2005/SRMS_Km_2303.dat",
                                       start_time = start_date, end_time = end_date, filter_spatial=True,
                                       region = space_magnitude_region, apply_filters=True) 
 
-SRMS_DC = csep.load_catalog_forecast("California_inlabru_forecasts/Forecasts/SRMSMs_Km_2511.dat",
+SRMS_DC = csep.load_catalog_forecast("/Forecasts/Forecasts_1985_2005/SRMSMs_Km_2303.dat",
                                       start_time = start_date, end_time = end_date, filter_spatial=True,
                                       region = space_magnitude_region, apply_filters=True) 
                                       
-SRMSNK_full = csep.load_catalog_forecast("California_inlabru_forecasts/Forecasts/SRMSNK_Km_2511.dat" ,
+SRMSNK_full = csep.load_catalog_forecast("/Forecasts/Forecasts_1985_2005/SRMSNK_Km_2303.dat" ,
                                       start_time = start_date, end_time = end_date, filter_spatial=True,
                                       region = space_magnitude_region, apply_filters=True)  
                                       
-SRMSNK_DC = csep.load_catalog_forecast("California_inlabru_forecasts/Forecasts/SRMSNKMs_Km_2511.dat" ,
+SRMSNK_DC = csep.load_catalog_forecast("/Forecasts/Forecasts_1985_2005/SRMSNKMs_Km_2303.dat" ,
                                       start_time = start_date, end_time = end_date, filter_spatial=True,
                                       region = space_magnitude_region, apply_filters=True)
                                       
-FDSRMS_full = csep.load_catalog_forecast("California_inlabru_forecasts/Forecasts/FDSRMS_Km_2511.txt" ,
+FDSRMS_full = csep.load_catalog_forecast("/Forecasts/Forecasts_1985_2005/FDSRMS_Km_2303.txt" ,
                                       start_time = start_date, end_time = end_date, filter_spatial=True,
                                       region = space_magnitude_region, apply_filters=True)
                                       
-FDSRMS_DC = csep.load_catalog_forecast("California_inlabru_forecasts/Forecasts/FDSRMSMs_Km_2511.txt" ,
+FDSRMS_DC = csep.load_catalog_forecast("/Forecasts/Forecasts_1985_2005/FDSRMSMs_Km_2303.txt" ,
                                       start_time = start_date, end_time = end_date, filter_spatial=True,
                                       region = space_magnitude_region, apply_filters=True)                                  
 ```
@@ -643,36 +658,26 @@ def alphabet_tests_catalog(forecast_list, catalog):
     
     for i in range(len(forecast_list)):
         print("Running L-tests")
-        result = catalog_evaluations.pseudolikelihood_test(forecast_list[i], catalog, verbose=False)
-        LTests.append(result)
+        Lresult = catalog_evaluations.pseudolikelihood_test(forecast_list[i], catalog, verbose=False)
+        LTests.append(Lresult)
         
-    for i in range(len(forecast_list)):
         print("Running S-tests")
-        result = catalog_evaluations.spatial_test(forecast_list[i], catalog, verbose=False)
-        STests.append(result)
+        Sresult = catalog_evaluations.spatial_test(forecast_list[i], catalog, verbose=False)
+        STests.append(Sresult)
     
-    for i in range(len(forecast_list)):
         print("Running M-tests")
-        result = catalog_evaluations.magnitude_test(forecast_list[i], catalog, verbose=False)
-        MTests.append(result)
+        Mresult = catalog_evaluations.magnitude_test(forecast_list[i], catalog, verbose=False)
+        MTests.append(Mresult)
     
-    for i in range(len(forecast_list)):
-        print("Running M-tests")
-        result = catalog_evaluations.number_test(forecast_list[i], catalog, verbose=False)
-        NTests.append(result)
+        print("Running N-tests")
+        Nresult = catalog_evaluations.number_test(forecast_list[i], catalog, verbose=False)
+        NTests.append(Nresult)
     
     return LTests, MTests, NTests, STests
 ```
 ```{python}
 ## Make a list of forecasts
-forecast_cats = []
-
-forecast_cats.append(SRMS_full)
-forecast_cats.append(SRMS_DC)
-forecast_cats.append(FDSRMS_full)
-forecast_cats.append(FDSRMS_DC)
-forecast_cats.append(SRMSNK_full)
-forecast_cats.append(SRMSNK_DC)
+forecast_cats = [SRMS_full, SRMS_DC, FDSRMS_full, FDSRMS_DC, SRMSNK_full, SRMSNK_DC]
 
 ## Then run all the tests
 LTestCat, MTestCat, NTestCat, STestCat = alphabet_tests_catalog(forecast_cats, comcat_catalog)
@@ -849,7 +854,7 @@ plt.show()
 Load gridded forecasts
 
 ```{python}
-SRMS = csep.load_gridded_forecast("California_inlabru_forecasts/Forecasts/SRMS_gridded_Km_2511.dat",
+SRMS = csep.load_gridded_forecast("/Forecasts/Forecasts_1985_2005/SRMS_gridded_Km_2303.dat",
                                   start_date=start_date,
                                   end_date=end_date,
                                   name='SRMS')
@@ -857,27 +862,27 @@ SRMS = csep.load_gridded_forecast("California_inlabru_forecasts/Forecasts/SRMS_g
 #SRMS.plot()
 #plt.show()
 
-SRMSms = csep.load_gridded_forecast("California_inlabru_forecasts/Forecasts/SRMSms_gridded_Km_2511.dat",
+SRMSms = csep.load_gridded_forecast("/Forecasts/Forecasts_1985_2005/SRMSms_gridded_Km_2303.dat",
                                   start_date=start_date,
                                   end_date=end_date,
                                   name='SRMS declustered')
                                   
-FDSRMS = csep.load_gridded_forecast("California_inlabru_forecasts/Forecasts/FDSRMS_gridded_Km_2511.dat",
+FDSRMS = csep.load_gridded_forecast("/Forecasts/Forecasts_1985_2005/FDSRMS_gridded_Km_2303.dat",
                                   start_date=start_date,
                                   end_date=end_date,
                                   name='FDSRMS')
                                   
-FDSRMSms = csep.load_gridded_forecast("California_inlabru_forecasts/Forecasts/FDSRMSms_gridded_Km_2511.dat",
+FDSRMSms = csep.load_gridded_forecast("/Forecasts/Forecasts_1985_2005/FDSRMSms_gridded_Km_2303.dat",
                                   start_date=start_date,
                                   end_date=end_date,
                                   name='FDSRMS declustered')
                                   
-SRMSNK = csep.load_gridded_forecast("California_inlabru_forecasts/Forecasts/SRMSNK_gridded_Km_2511.dat",
+SRMSNK = csep.load_gridded_forecast("/Forecasts/Forecasts_1985_2005/SRMSNK_gridded_Km_2303.dat",
                                   start_date=start_date,
                                   end_date=end_date,
                                   name='SRMSNK')
                                   
-SRMSNKms = csep.load_gridded_forecast("California_inlabru_forecasts/Forecasts/SRMSNKms_gridded_Km_2511.dat",
+SRMSNKms = csep.load_gridded_forecast("/Forecasts/Forecasts_1985_2005/SRMSNKms_gridded_Km_2303.dat",
                                   start_date=start_date,
                                   end_date=end_date,
                                   name='SRMSNK declustered')
@@ -913,34 +918,22 @@ def alphabet_tests_gridded(forecast_list, catalog):
     STests = []
     
     for i in range(len(forecast_list)):
-        result = poisson.conditional_likelihood_test(forecast_list[i], catalog, num_simulations=100000)
-        LTests.append(result)
+        Lresult = poisson.conditional_likelihood_test(forecast_list[i], catalog, num_simulations=100000)
+        LTests.append(Lresult)
     
-    for i in range(len(forecast_list)):
-        result = poisson.magnitude_test(forecast_list[i], catalog, num_simulations=100000)
-        MTests.append(result)
+        Mresult = poisson.magnitude_test(forecast_list[i], catalog, num_simulations=100000)
+        MTests.append(Mresult)
     
-    for i in range(len(forecast_list)):
-        result = poisson.number_test(forecast_list[i], catalog)
-        NTests.append(result)
+        Nresult = poisson.number_test(forecast_list[i], catalog)
+        NTests.append(Nresult)
     
-    for i in range(len(forecast_list)):
-        result = poisson.spatial_test(forecast_list[i], catalog, num_simulations=100000)
-        STests.append(result)
+        Sresult = poisson.spatial_test(forecast_list[i], catalog, num_simulations=100000)
+        STests.append(Sresult)
     
     return LTests, MTests, NTests, STests
 
 ### Now list forecasts and apply the function to them. Takes a wee while with num_simulations so high.
-my_forecasts = []
-
-my_forecasts.append(SRMS)
-my_forecasts.append(SRMSms)
-my_forecasts.append(FDSRMS)
-my_forecasts.append(FDSRMSms)
-my_forecasts.append(SRMSNK)
-my_forecasts.append(SRMSNKms)
-my_forecasts.append(Helmstetter)
-my_forecasts.append(Helmstetter_dec)
+my_forecasts = [SRMS, SRMSms, FDSRMS, FDSRMSms, SRMSNK, SRMSNKms, Helmstetter, Helmstetter_dec]
 
 LtestT1, MtestT1, NtestT1, StestT1 = alphabet_tests_gridded(my_forecasts, comcat_catalog)
 LtestT2, MtestT2, NtestT2, StestT2 = alphabet_tests_gridded(my_forecasts, comcat_catalog2)
@@ -996,14 +989,7 @@ fig.set_size_inches(10, 10)
 Run T-tests and make Figure 6
 ```{python}
 ## Set up list of forecasts
-my_objects = []
-
-my_objects.append(SRMS)
-my_objects.append(SRMSms)
-my_objects.append(FDSRMS)
-my_objects.append(FDSRMSms)
-my_objects.append(SRMSNK)
-my_objects.append(SRMSNKms)
+my_objects = [SRMS, SRMSms, FDSRMS, FDSRMSms, SRMSNK, SRMSNKms]
 
 ## For each time period, compare each model with Helmstetter model
 paired_test_result1 = []
@@ -1153,3 +1139,9 @@ plt.show()
 plt.savefig('events_per_year.pdf')
 ```
 
+Save the catalogues in case of future changes 
+```{python}
+comcat_catalog.write_ascii('2006-2011-comcat.csv')
+comcat_catalog2.write_ascii('2011-2016-comcat.csv')
+comcat_catalog3.write_ascii('2016-2021-comcat.csv')
+```
