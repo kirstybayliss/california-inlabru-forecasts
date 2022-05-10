@@ -1,6 +1,7 @@
 # california-inlabru-forecasts
 
-This folder contains all neccessary data and code to reproduce the forecasts and figures in "Pseudo-prospective testing of 5-year earthquake forecasts for California using inlabru", Bayliss, Naylor, Kamranzad and Main (submitted 2021).  
+This folder contains all neccessary data and code to reproduce the forecasts and figures in "Pseudo-prospective testing of 5-year earthquake forecasts for California using inlabru", Bayliss, Naylor, Kamranzad and Main (
+https://doi.org/10.5194/nhess-2021-403).  
 UCERF3 data downloaded from https://pubs.usgs.gov/of/2013/1165/ in June 2019.  
 The strain rate model used in this work is available at https://platform.openquake.org/maps/82 and was downloaded in April 2021.   
 The exact versions are included in the 'Data' folder to ensure future reproducibility.
